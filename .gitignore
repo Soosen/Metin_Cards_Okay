@@ -1,8 +1,8 @@
-/__pycache__
-/build
-/dist
+__pycache__
+build
+dist
 generations
-/Moja kopa gry
+Moja kopa gry
 game.pkl
 games_history.pkl
 main.spec

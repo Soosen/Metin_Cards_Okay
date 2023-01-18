@@ -12,7 +12,7 @@ except:
         tf.keras.layers.Dense(64, input_shape=(
             30,), activation='relu'),
         tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dense(11)
+        tf.keras.layers.Dense(15)
     ])
 
 model.compile(loss='mse', optimizer='adam')

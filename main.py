@@ -1,15 +1,18 @@
 from game import Game
-from card import Card
+import gui
+import arcade
+
+
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+SCREEN_TITLE = "Metin2 Okey Cards Simulator"
 
 def main():
     game = Game()
-    game.shuffle_cards(game.unused_cards)
-    game.start()
-    print(game.state)
-    game.remove_card(1)
-    print(game.state)
+    GameWin = gui.GameWindow(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, game)
+    GameWin.setup()
+    arcade.run()
     
-
 
 if __name__ == '__main__':
     main()

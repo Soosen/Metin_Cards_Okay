@@ -5,6 +5,40 @@ from keras.layers import Dense
 from game import Game
 import pickle
 import os
+import multiprocessing
+
+
+def main():
+    try:
+        generation = load_generation("generations/gen.pkl")
+    except:
+        generation = create_first_candidates()  
+    try:
+        with open("game.pkl", "rb") as f:
+            games = pickle.load(f)
+    except:
+        games = []  
+        for i in range(3):   
+            game = Game()
+            game.start()
+            games.append(game)
+
+    game = Game()
+    game.start()
+    gens = 5
+    for i in range(gens):
+        print("Generation: " + str(i + 1))
+        fitness= train(generation, game)
+        print(fitness)
+        generation = create_new_generation(generation, fitness)
+        if(i % 10 == 9):
+            save_generation(generation, "generations/gen.pkl")
+
+    save_generation(generation, "generations/gen.pkl")
+
+    with open("game.pkl", 'wb') as f:
+        # Write the generation to the file
+        pickle.dump(game, f)
 
 def create_first_candidates():
     # Create a list to store the 100 neural networks
@@ -12,19 +46,20 @@ def create_first_candidates():
 
     # Define the number of inputs and outputs for the neural networks
     num_inputs = 30
-    num_outputs = 11
+    num_outputs = 15
     # Create a loop to generate 100 neural networks
     for i in range(100):
         print("Creating new randomized model: " + str(i))
         # Create a new neural network
         model = Sequential()
-        model.add(Dense(64, input_dim=num_inputs, activation='relu'))
-        model.add(Dense(64, activation='relu'))
-        model.add(Dense(num_outputs, activation='softmax'))
+        # Add a fully connected layer with 32 units and 'relu' activation
+        model.add(Dense(32, activation='relu', input_shape=(30,)))
 
-        # Compile the neural network
-        model.compile(loss='categorical_crossentropy',
-                    optimizer='adam', metrics=['accuracy'])
+        # Add a fully connected layer with 15 units and 'softmax' activation
+        model.add(Dense(15, activation='softmax'))
+
+        # Compile the model with 'adam' optimizer and 'categorical_crossentropy' loss
+        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
         # Randomize the weights of the neural network
         weights = model.get_weights()
@@ -81,23 +116,25 @@ def create_new_generation(neural_networks, fitness):
             child_weights.append(child_w)
 
         # Mutate the weights
-        mutation_rate = 0.25
+        mutation_rate = 0.3
         for i in range(len(child_weights)):
             if np.random.rand() < mutation_rate:
                 child_weights[i] += np.random.normal(
-                    scale=0.1, size=child_weights[i].shape)
+                    scale=0.2, size=child_weights[i].shape)
 
         num_inputs = 30
-        num_outputs = 11
+        num_outputs = 15
 
         # Create a new neural network with the child weights
         model = Sequential()
-        model.add(Dense(64, input_dim=num_inputs, activation='relu'))
-        model.add(Dense(64, activation='relu'))
-        model.add(Dense(num_outputs, activation='softmax'))
+        # Add a fully connected layer with 32 units and 'relu' activation
+        model.add(Dense(32, activation='relu', input_shape=(30,)))
 
-        model.compile(loss='categorical_crossentropy',
-                      optimizer='adam', metrics=['accuracy'])
+        # Add a fully connected layer with 15 units and 'softmax' activation
+        model.add(Dense(15, activation='softmax'))
+
+        # Compile the model with 'adam' optimizer and 'categorical_crossentropy' loss
+        model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
         model.set_weights(child_weights)
 
@@ -106,27 +143,36 @@ def create_new_generation(neural_networks, fitness):
 
     return new_generation
 
-def train(generation):
+def train(generation, game):
     fitness = []
-    i = 1
+    #template_game = Game()
+    #template_game.start()
+    i = 0
     for individual in generation:
-        print("Training Individual: " + str(i))
         i += 1
-        game = Game()
-        game.reset_game()
-        game.start()
-        while(not game.is_over()):
-            predictions = individual.predict([game.state], verbose = False)
-            action = np.argmax(predictions) + 1
-            #print(game.state)
-            game.perform_action(action)
-
-        fitness.append(max(game.fitness, 1))
-        #print(game.state)
+        #template_game = games[random.randint(0, 2)].copy()
+        template_game = Game()
+        template_game.start()
+       #print(template_game.state)
+        print("Training Individual: " + str(i))
+        fitness.append(play_game(individual, template_game))
         print(fitness)
 
     return fitness
 
+
+def play_game(individual, template_game):
+    game = template_game.copy()
+    #game = Game()
+    #game.start()
+    while(not game.is_over()):
+        #print(game.state)
+        predictions = individual.predict([game.state], verbose=False)
+        action = np.argmax(predictions) + 1
+        #print(action)
+        game.perform_action(action)
+    
+    return int(max(game.fitness, 1))
 
 def save_generation(generation, file_name):
     if not os.path.exists(file_name):
@@ -148,16 +194,7 @@ def load_generation(filename):
 
     return neural_networks
 
-try:
-    generation = load_generation("generations/gen.pkl")
-except:
-    generation = create_first_candidates()
 
-gens = 1
-for i in range(gens):
-    print("Generation: " + str(i + 1))
-    fitness = train(generation)
-    print(fitness)
-    generation = create_new_generation(generation, fitness)
+if __name__ == '__main__':
+    main()
 
-save_generation(generation, "generations/gen.pkl")
